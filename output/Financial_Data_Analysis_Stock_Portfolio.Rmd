@@ -1,0 +1,868 @@
+---
+title: "Financial Data Analysis : Stock Portfolio"
+author: "Sung-In Cho (Group Leader), Min-Su Kim, Min-Jae Kim, Sung-Jin Park"
+date: "5/27/2016"
+editor_options: 
+  chunk_output_type: console
+---
+
+## 1. __Portfolio__
+
+  - A portfolio is a collection of financial investments like stocks, bonds, commodities, cash, and cash equivalents, including closed-end funds and exchange-traded funds (ETFs). One of the key concepts in portfolio management is the wisdom of diversification—which simply means not to put all your eggs in one basket. Diversification tries to reduce risk by allocating investments among various financial instruments, industries, and other categories. It aims to maximize returns by investing in different areas that would each react differently to the same event.
+  
+    Ex) Portfolio consists of two stock items
+    $$R_{p}=W_{1}R_{1}+W_{2}R_{2} (단, W_{1}+W_{2}=1)$$
+    $$E(R_{p})=W_{1}\mu_{1}+W_{2}\mu_{2}$$
+    $$Var(R_{p})=W_{1}^2\sigma_{1}^2+W_{2}^2\sigma_{2}^2+2W_{1}W_{2}\rho\sigma_{1}\sigma_{2}$$
+    
+  - Portfolio Effect : An effect that occurs when you build a portfolio by collecting two or more of financial investments. Risk of each financial investment is offset by risk of other financial investments in a portfolio.
+
+***
+
+### 1.1 __Loading Data__ 
+
+* Selected stock items 
+    - Aaron's inc (AAN) : Aaron's, Inc. is a lease-to-own retailer. The company focuses on leases and retail sales of furniture, electronics, appliances, and computers.
+    - Advanced Semiconductor Engineering (ASE) : Provider of independent semiconductor assembling and test manufacturing services.
+    - IBM (IBM) :  IBM is an American cloud platform and cognitive solutions multinational technology and consulting company.
+    - Actuant corp (ATU) : Actuant Corporation is a diversified industrial company.
+    - Exxon Mobil corp (XOM) : Exxon Mobil Corporation is an American multinational oil and gas corporation.
+
+```{r}
+setwd('C:\\Users\\sungi\\Documents\\GitHub\\Financial-Data-Analysis-Stock-Portfolio\\data')
+
+AAN<-read.csv("AAN(Aaron's_Inc).csv")
+ATU<-read.csv("ATU(Actuant_Corp).csv")
+ASE<-read.csv("ASE(Advanced_Semiconductor_Engineering_Inc.).csv")
+IBM<-read.csv("IBM(International_Business_Machines).csv")
+XOM<-read.csv("XOM(Exxon_Mobile_corp).csv")
+dat.BM <- read.csv('NYSE2.csv')
+```
+***
+
+### 1.2 __Data Handling__ 
+* We selected the stock price when the market is closed.
+
+```{r}
+AANc<-AAN[,5]
+ATUc<-ATU[,5]
+ASEc<-ASE[,5]
+IBMc<-IBM[,5]
+XOMc<-XOM[,5]
+BM<-dat.BM[,5]/100
+
+day<-as.factor(AAN[,1])
+
+dat<-data.frame(day,AANc,ATUc,ASEc,IBMc,XOMc,BM)
+colnames(dat)<-c("Date","AAN","ATU","ASE","IBM","XOM","BM")
+
+head(dat)
+
+datm<-as.matrix(dat[,-c(1,7)])
+
+head(datm)
+```
+***
+
+### 1.3 __Stock Price Plot__ 
+     
+* Plot of the price of each stock item.
+     
+* NYSE index has a much higher price compared to other stock items. To see the whole trend of each stock price more easily, we divided each stock price by 100.
+
+```{r warning=FALSE, message=FALSE}
+library(ggplot2)
+library(reshape)
+library(plotly)
+library(grid)
+library(gridExtra)
+```
+
+```{r}
+p <- plot_ly(dat, x = ~Date, y = ~AAN, name="AAN", type='scatter',mode='lines')
+p %>% add_trace(y = ~ATU, x = ~Date, name="ATU") %>% 
+  add_trace(y = ~ASE,x= ~Date, name="ASE") %>% 
+  add_trace(y = ~IBM, x = ~Date, name="IBM") %>% 
+  add_trace(y = ~XOM, x = ~Date, name="XOM") %>% 
+  add_trace(y = ~BM, x = ~Date, name="NYSE") %>% 
+  layout(title = "Stock Price Plot",yaxis=list(title="Price"),showlegend = TRUE)
+```
+
+***
+
+### 1.4 __Returns__ 
+```{r}
+basket<-1:5
+dat.diff <- diff(datm)
+Returns <- dat.diff/datm[-nrow(datm),]
+Returnsn<-data.frame(index=1:nrow(Returns),Returns)
+head(Returns)
+```
+***
+
+### 1.5 __Plot Returns__ 
+```{r}
+p <- plot_ly(Returnsn, x=~index, y = ~AAN, name="AAN", type='scatter', mode='lines')
+p %>% add_trace(x=~index,y = ~ATU, name="ATU") %>% 
+  add_trace(x=~index, y = ~ASE, name="ASE") %>% 
+  add_trace(x=~index,y = ~IBM, name="IBM") %>% 
+  add_trace(x=~index, y = ~XOM, name="XOM") %>% 
+  layout(title = "Return Plot",yaxis=list(title="Return"),showlegend = TRUE)
+```
+
+***
+
+## 2. __Portfolios__
+
+### 2.1 __Minimum Variance Portfolio (MVP)__ 
+
+
+
+-  To minimize \({\mathbf{w'}} {\mathbf{\Sigma}} {\mathbf{w}}\)
+ subject to \({\mathbf{w'}} {\mathbf{\mu}}\) = \(\mu_{p}\), \({\mathbf{w'}} {\mathbf{1}}\) = 1. \[ \large{{\mathbf{w_{p}}} = {\mathbf{g}} + {\mathbf{h}} \mu_{p}} \] \({\mathbf{g}} = \frac{B({\mathbf{\Sigma^{-1}}} {\mathbf{1}}) - A({\mathbf{\Sigma^{-1}}} {\mathbf{\mu}})}{D}\)
+\({\mathbf{h}} = \frac{C({\mathbf{\Sigma^{-1}}} {\mathbf{\mu}}) - A({\mathbf{\Sigma^{-1}}} {\mathbf{1}})}{D}\)
+\(A = {\mathbf{1'}} \Sigma^{-1} {\mathbf{\mu}}\), \(B = {\mathbf{\mu'}} \Sigma^{-1} {\mathbf{\mu}}\), \(C = {\mathbf{1'}} \Sigma^{-1} {\mathbf{1}}\), \(D = BC - A^{2}\)
+
+
+
+* MVP function
+```{r echo=FALSE}
+Minimum.variance.portfolio <- function(Returns, mu.p, do.plot=F, prt=F)
+{
+  n.p <- length(mu.p)
+  mu <- apply(Returns, 2, mean)
+  Sigma <- cov(Returns)
+  Sigma.inv <- solve(Sigma)
+  ones <- rep(1, dim(Returns)[2])
+  
+  Av <- (t(ones)%*%Sigma.inv%*%mu)[1,1]
+  Bv <- (t(mu)%*%Sigma.inv%*%mu)[1,1]
+  Cv <- (t(ones)%*%Sigma.inv%*%ones)[1,1]
+  Dv <- Bv*Cv-Av*Av
+  
+  g <- (Bv*Sigma.inv%*%ones-Av*Sigma.inv%*%mu)/Dv
+  h <- (Cv*Sigma.inv%*%mu-Av*Sigma.inv%*%ones)/Dv
+  
+  w.p <- sigma.p <- NULL
+  for ( j in 1:n.p ) {
+    w <- g+h*mu.p[j]
+    w.p <- cbind(w.p, w)
+    sigma.p <- c(sigma.p, sqrt((t(w)%*%Sigma%*%w)[1,1]))
+  }
+  
+  if (do.plot) {
+    plot(sigma.p, mu.p, xlim=c(min(sigma.p), max(sigma.p)), xlab="volatility", ylab="expected rate of return")
+    lines(sigma.p, mu.p, col=2)
+  }
+  if (prt) print(rbind(mu.p, sigma.p, w.p))
+  
+  return(list(mu.p=mu.p, sigma.p=sigma.p, w.p=w.p))
+}
+```
+
+```{r}   
+mu.p <- seq(from=0, to=0.05, length=21)
+res.mvp <- Minimum.variance.portfolio(Returns=Returns[,basket], 
+                                      mu.p=seq(from=0, to=0.05, length=50), 
+                                      do.plot=T, prt=F)
+```
+
+```{r echo=FALSE}
+c(Min.sigma.p=min(res.mvp$sigma.p),Min.mu.p=res.mvp$mu.p[which(res.mvp$sigma.p==min(res.mvp$sigma.p))])
+```
+    
+* The minimum volatility is __0.033__ and corresponding expected rate of return to that value is __0.003__. Therefore, we set expected rate of return to be larger than __0.003__ and checked the portfolio result.
+
+```{r}
+MVP.prediction <- Minimum.variance.portfolio(Returns=Returns[,basket], 
+                                             mu.p=c(0.005,0.01), 
+                                             do.plot=F, prt=F)$w.p
+colnames(MVP.prediction) <- c("ERR: 0.005", "ERR: 0.01")
+MVP.prediction
+```
+
+* Result above shows the predicted weights for each stock item in order to achieve the given expected rate of return when MVP portfolio is used.
+
+***
+
+### 2.2 __Tangency Portfolio__ 
+  
+  
+  
+-  To minimize \({\mathbf{w'}} {\mathbf{\Sigma}} {\mathbf{w}}\)
+ subject to \({\mathbf{w'}}\)\({\mathbf{\mu}}\) + \((1- {\mathbf{w'}} {\mathbf{1}})\)\(R_{f}\) = \(\mu_{p}\). \[ {\mathbf{w_{q}}} = \frac{{\mathbf{w_{p}}}}{{\mathbf{1'}} {\mathbf{w_{p}}}} = \frac{c_{p} {\mathbf{\bar{w}}}}{c_{p} {\mathbf{1'}} {\mathbf{\bar{w}}}} = \frac{1}{{\mathbf{1'}} {\mathbf{\Sigma^{-1}}} ({\mathbf{\mu}} - R_{f} {\mathbf{1}})} · {\mathbf{\Sigma^{-1}}} ({\mathbf{\mu}} - R_{f} {\mathbf{1}}) \]
+
+
+
+* Tangency function
+```{r}
+Tangency.portfolio <- function(Returns, r.f, do.plot=F)
+{
+  mu <- apply(Returns, 2, mean)
+  Sigma <- cov(Returns)
+  Sigma.inv <- solve(Sigma)
+  ones <- rep(1, dim(Returns)[2])
+  tmp <- mu-r.f*ones
+  w.bar <- Sigma.inv%*%tmp
+  
+  w.q <- w.bar/sum(w.bar)
+  mu.q <- crossprod(w.q, mu)
+  sigma.q <- sqrt((t(w.q)%*%Sigma%*%w.q)[1,1])
+  
+  lb <- max(0, mean(mu)-0.025)
+  ub <- max(mu)+0.025
+  mvp <- Minimum.variance.portfolio(Returns, mu.p=seq(from=lb, to=ub, len=21), do.plot=do.plot, prt=F)
+
+  if (do.plot) {
+    slope <- (mu.q-r.f)/sigma.q
+    abline(r.f, slope, col=3)
+    points(sigma.q, mu.q, pch=17, col=2)
+  }
+  
+  return(list(mu.q=mu.q, sigma.q=sigma.q, w.q=w.q))
+}
+```
+
+***
+
+* CD(Negotiable Certificate of Deposit) Interest Rate : 1.56%
+
+\[{r.f} =\frac{CD}{{12}*{100}} = {0.0013}\]
+
+* The point of contact in this graph represents the portfolio which has the maximum Sharpe ratio. It is the most optimized portfolio when a risk free asset exists.
+```{r}
+res.tan <- Tangency.portfolio(Returns[,basket], r.f=0.0013, do.plot=T)
+res.tan
+```
+
+***
+
+### 2.3 __Sharp Ratio__
+
+* Sharp ratio is used to help investors understand the return of an investment compared to its risk. Generally, the greater the value of the Sharpe ratio, the more attractive the risk-adjusted return.
+ 
+\[\frac{\mu_{p} - R_{f}}{\sigma_{p}}\]
+
+
+```{r}
+(res.tan$mu.q-0.0013)/res.tan$sigma.q  
+```
+***
+
+## 3. __CAPM measure__
+
+  * CAPM Model(Capital Asset Pricing Model)
+  
+    - Capital Market Line :        
+    $$\mu_{p}=R_{f}+\frac{\mu_{A}-R_{f}}{\sigma_{A}}\sigma_{p}$$
+    
+    * Capital asset pricing model (CAPM), depicts the trade-off between risk and return for efficient portfolios. It is a theoretical concept that represents all the portfolios that optimally combine the risk-free rate of return and the market portfolio of risky assets.
+
+
+    - SCL(Security Characteristic Line) 
+    $$R_{i}=\alpha_{i}+\beta_{i}R_{m}$$
+    - Equilibrium & SML(Security market Line)
+    $$\frac{E(R_{m})-R_{f}}{\sigma_{m}}=\frac{E(R_{i})-R_{f}}{\sigma_{im}}$$
+
+
+* CAPM function
+```{r}
+CAPM.measures <- function(R.p, R.BM, r.f, do.plot=T)
+{
+  x <- R.BM - r.f
+  y <- R.p - r.f
+  res.lm <- lm(y~x)
+  plot(x, y, xlab='Benchmark', ylab='Portfolio')
+  abline(res.lm$coef, col=2, lwd=2)
+  abline(v=0, lty=2)
+  abline(h=0, lty=2)
+  expected.excess.return <- mean(y)
+  vol <- sd(y)
+  alpha <- res.lm$coef[1]
+  beta <- res.lm$coef[2]
+  Sharpe <- expected.excess.return/vol
+  Treynor <- expected.excess.return/beta
+  
+  return(list(Expected.excess.return=expected.excess.return, 
+              Volatility=vol,
+              Jensen.alpha=alpha, 
+              Beta=beta, 
+              Sharpe=Sharpe, 
+              Treynor=Treynor))
+}
+```
+
+***
+
+  **Expected excess return**
+
+  - Bigger the better
+
+
+
+  **Volatility**
+
+  - Represents a volatility of expected return. It is used as an indicator of risks.
+
+
+
+  **Jensen’s alpha**
+
+  - Represents a excess return relative to the current market economy. The higher the value of Jensen's alpha, the better the performance of the fund compared to the market performance. If it has a negative value, it means the performance of the fund is lower than the market performance.
+ 
+ 
+ 
+
+  **Beta**
+
+  $$\beta=\frac{\sigma_{im}}{\sigma_{m^2}}$$
+
+  - Measure of the volatility of a portfolio compared to the market as a whole.
+  - If a stock has a beta of 1.0, it indicates that its price activity is strongly correlated with the market.A beta value that is less than 1.0 means that the security is theoretically less volatile than the market. A beta that is greater than 1.0 indicates that the security's price is theoretically more volatile than the market.
+ 
+ 
+ 
+
+  **Treynor ratio**
+
+  \[\frac{\mu_{p} - R_{f}}{\beta_{p}}\]
+
+  - The Treynor ratio, also known as the reward-to-volatility ratio, is a performance metric for determining how much excess return was generated for each unit of risk taken on by a portfolio.
+
+
+
+***
+
+### 3.1 __Benchmark Data Handling__ 
+```{r}
+dat.BM <- as.matrix(dat.BM[,-1])
+BM.diff <- diff(dat.BM)
+R.BM <- BM.diff/dat.BM[-nrow(dat.BM),]
+head(R.BM)
+```
+***
+
+### 3.2 __Feature of Each Portfolio by CAPM__ 
+
+#### 3.2.1 __Diversified Investment Portfolio__ ####
+
+* In the above graph of the efficient frontier, the minimum volatility was __0.033__ and the corresponding expected rate of return was __0.003__.
+    - We set expected rate of return to __0.003__ and created a portfolio using MVP method.
+
+```{r result='hide', echo=FALSE}
+par(mfrow=c(2,2))
+
+R.p.tan <- Returns[,basket]%*%res.tan$w.q
+CAPM.tan<-CAPM.measures(R.p.tan, R.BM[,4], r.f=0.0013)
+title(main = "Tangency")
+
+R.p.mvp<-Returns[,basket]%*%res.mvp$w.p[,4]
+CAPM.mvp<-CAPM.measures(R.p.mvp, R.BM[,4], r.f=0.0013)
+title(main = "MVP")
+
+w.p.same<-rep(0.2,5)
+R.p.same<- Returns[,basket]%*%w.p.same
+CAPM.same<-CAPM.measures(R.p.same, R.BM[,4], r.f=0.0013)
+title(main = "Same")
+```
+
+```{r echo=FALSE}
+data.frame(row.names=c("Tangency","MVP","Same"),Jensen_Alpha=c(0.0085,0.0047,0.0053),Beta=c(0.746,0.679,0.7619))
+```
+
+***
+
+#### 3.2.2 __Investment without creating a Portfolio (Individual stock items)__ ####
+```{r results='hide', echo=FALSE}
+par(mfrow=c(2,3))
+
+R.p.AAN <- Returns[,1]
+CAPM.AAN<-CAPM.measures(R.p.AAN, R.BM[,4], r.f=0.0013)
+title(main = "AAN")
+
+R.p.ATU <- Returns[,2]
+CAPM.ATU<-CAPM.measures(R.p.ATU, R.BM[,4], r.f=0.0013)
+title(main = "ATU")
+
+R.p.ASE <- Returns[,3]
+CAPM.ASE<-CAPM.measures(R.p.ASE, R.BM[,4], r.f=0.0013)
+title(main = "ASE")
+
+R.p.IBM <- Returns[,4]
+CAPM.IBM<-CAPM.measures(R.p.IBM, R.BM[,4], r.f=0.0013)
+title(main = "IBM")
+
+R.p.XOM <- Returns[,5]
+CAPM.XOM<-CAPM.measures(R.p.XOM, R.BM[,4], r.f=0.0013)
+title(main = "XOM")
+```
+
+```{r echo=FALSE}
+data.frame(row.names=c("AAN","ATU","ASE","IBM","XOM"),
+           Jensen_Alpha=c(0.0021,0.0095,0.0061,0.0048,0.0039),
+           Beta=c(0.3484,1.3029,0.7806,0.5276,0.8503))
+```
+
+***
+
+|                        | Tangency | MVP    | Same   | AAN    | ATU    | ASE    | IBM    | XOM    |
+|------------------------|----------|--------|--------|--------|--------|--------|--------|--------|
+| Expected Excess Return | 0.0052   | 0.0018 | 0.002  | 0.0005 | 0.0039 | 0.0027 | 0.0025 | 0.0002 |
+| Volatility             | 0.0613   | 0.0334 | 0.0367 | 0.1006 | 0.0743 | 0.0747 | 0.0455 | 0.044  |
+| Jensen Alpha           | 0.0085   | 0.0047 | 0.0053 | 0.0021 | 0.0095 | 0.0061 | 0.0048 | 0.0039 |
+| Beta                   | 0.7456   | 0.6791 | 0.7619 | 0.3484 | 1.3029 | 0.7806 | 0.5276 | 0.8503 |
+| Sharpe                 | 0.0856   | 0.0527 | 0.0536 | 0.0055 | 0.0518 | 0.0363 | 0.0541 | 0.0053 |
+| Treynor                | 0.007    | 0.0026 | 0.0026 | 0.0016 | 0.003  | 0.0035 | 0.0047 | 0.0002 |
+
+***
+
+### 3.3 __Portfolio Comparison__ 
+* We compared each portfolio's feature values using a bar-plot.
+```{r echo=FALSE}
+alpha<-c(CAPM.tan$Jensen.alpha,CAPM.same$Jensen.alpha,
+         CAPM.mvp$Jensen.alpha,CAPM.AAN$Jensen.alpha,
+         CAPM.ATU$Jensen.alpha,CAPM.ASE$Jensen.alpha,
+         CAPM.IBM$Jensen.alpha,CAPM.XOM$Jensen.alpha)
+
+beta<-c(CAPM.tan$Beta,CAPM.same$Beta,
+        CAPM.mvp$Beta,CAPM.AAN$Beta,
+        CAPM.ATU$Beta,CAPM.ASE$Beta,
+        CAPM.IBM$Beta,CAPM.XOM$Beta)
+
+sharpe<-c(CAPM.tan$Sharpe,CAPM.same$Sharpe,
+          CAPM.mvp$Sharpe,CAPM.AAN$Sharpe,
+          CAPM.ATU$Sharpe,CAPM.ASE$Sharpe,
+          CAPM.IBM$Sharpe,CAPM.XOM$Sharpe)
+
+treynor<-c(CAPM.tan$Treynor,CAPM.same$Treynor,
+           CAPM.mvp$Treynor,CAPM.AAN$Treynor,
+           CAPM.ATU$Treynor,CAPM.ASE$Treynor,
+           CAPM.IBM$Treynor,CAPM.XOM$Treynor)
+
+vol<-c(CAPM.tan$Volatility,CAPM.same$Volatility,
+       CAPM.mvp$Volatility,CAPM.AAN$Volatility,
+       CAPM.ATU$Volatility,CAPM.ASE$Volatility,
+       CAPM.IBM$Volatility,CAPM.XOM$Volatility)
+
+expect.r<-c(CAPM.tan$Expected.excess.return,
+            CAPM.same$Expected.excess.return,
+            CAPM.mvp$Expected.excess.return,
+            CAPM.AAN$Expected.excess.return,
+            CAPM.ATU$Expected.excess.return,
+            CAPM.ASE$Expected.excess.return,
+            CAPM.IBM$Expected.excess.return,
+            CAPM.XOM$Expected.excess.return)
+
+name<-c("Tangency","Same","Mvp","AAN","ATU",
+        "ASE","IBM","XOM")
+```
+
+### 3.3.1 __Data Handling__ 
+```{r}
+CAPM<-data.frame(expect.r,vol,alpha,beta,sharpe,treynor,name)
+colnames(CAPM)<-c("Expected.excess.return",
+                  "Volatility","Jensen.alpha","Beta",
+                  "Sharpe","Treynor","Portfolio.name")
+CAPM
+
+CAPM.m<-melt(CAPM,id=c("Portfolio.name"))
+head(CAPM.m)
+```
+
+***
+
+```{r echo=FALSE}
+CAPMg<-CAPM
+CAPMg$Portfolio.name <- factor(CAPMg$Portfolio.name, levels = CAPMg$Portfolio.name[order(-CAPMg$Expected.excess.return)])
+
+g1<-ggplot(CAPMg,aes(Portfolio.name,Expected.excess.return,
+                fill=factor(Portfolio.name)))+
+  geom_bar(stat="identity",position="dodge")+
+  theme(axis.text.x=element_text(angle=45))+
+  scale_fill_discrete(name = "Portfolio Names")+
+  ggtitle("Expected Excess Return")
+
+
+CAPMg$Portfolio.name <- factor(CAPMg$Portfolio.name, levels = CAPMg$Portfolio.name[order(-CAPMg$Jensen.alpha)])
+
+g2<-ggplot(CAPMg,aes(Portfolio.name,Jensen.alpha,
+                fill=factor(Portfolio.name)))+
+  geom_bar(stat="identity",position="dodge")+
+  theme(axis.text.x=element_text(angle=45))+
+  scale_fill_discrete(name = "Portfolio Names")+
+  ggtitle("Jensen Alpha")
+
+
+CAPMg$Portfolio.name <- factor(CAPMg$Portfolio.name, levels = CAPMg$Portfolio.name[order(-CAPMg$Volatility)])
+
+g3<-ggplot(CAPMg,aes(Portfolio.name,Volatility,
+                fill=factor(Portfolio.name)))+
+  geom_bar(stat="identity",position="dodge")+
+  theme(axis.text.x=element_text(angle=45))+
+  scale_fill_discrete(name = "Portfolio Names")+
+  ggtitle("Volatility")
+
+
+CAPMg$Portfolio.name <- factor(CAPMg$Portfolio.name, levels = CAPMg$Portfolio.name[order(-CAPMg$Beta)])
+
+g4<-ggplot(CAPMg,aes(Portfolio.name,Beta,
+                fill=factor(Portfolio.name)))+
+  geom_bar(stat="identity",position="dodge")+
+  theme(axis.text.x=element_text(angle=45))+
+  scale_fill_discrete(name = "Portfolio Names")+
+  ggtitle("Beta")
+
+
+CAPMg$Portfolio.name <- factor(CAPMg$Portfolio.name, levels = CAPMg$Portfolio.name[order(-CAPMg$Sharpe)])
+
+g5<-ggplot(CAPMg,aes(Portfolio.name,Sharpe,
+                fill=factor(Portfolio.name)))+
+  geom_bar(stat="identity",position="dodge")+
+  theme(axis.text.x=element_text(angle=45))+
+  scale_fill_discrete(name = "Portfolio Names")+
+  ggtitle("Sharpe")
+
+
+CAPMg$Portfolio.name <- factor(CAPMg$Portfolio.name, levels = CAPMg$Portfolio.name[order(-CAPMg$Treynor)])
+
+g6<-ggplot(CAPMg,aes(Portfolio.name,Treynor,
+                fill=factor(Portfolio.name)))+
+  geom_bar(stat="identity",position="dodge")+
+  theme(axis.text.x=element_text(angle=45))+
+  scale_fill_discrete(name = "Portfolio Names")+
+  ggtitle("Treynor")
+```
+
+
+#### 3.3.2 __Expected.excess.return & Alpha__ ####
+
+```{r echo=FALSE}
+grid.arrange(g1,g2,ncol=2)
+```
+
+**Expected Excess Return**
+
+* Expected excess return of tangency portfolio has the highest value.
+    
+**Jensen's alpha**
+
+* Jensen's alpha of ATU (individual stock item) has the highest value. Hence, it has the highest expected excess return relative to the current market economy.
+* Tangency portfolio has the highest value among diversified investments.
+
+***
+***
+
+#### 3.3.3 __Volatility & Beta__ ####
+
+```{r echo=FALSE}
+grid.arrange(g3,g4,ncol=2)
+```
+
+**Volatility**
+
+* As all of us expected, most of the diversified investments showed lower volatility than the investments on only one item.
+* Mvp portfolio has the lowest volatility.
+* Tangency portfolio was the only diversified investment that had higher volatility than IBM and XOM. But as we can see, it greatly reduced the volatility of AAN, ASE, ATU, and therefore it's hard to say that it failed to reduce the entire volatility.
+
+**Beta**
+
+* Stock prices of the industrial company (ATU) has the highest beta value.
+* Oil and gas company (XOM), Semiconductor assembling and test manufacturing company (ASE), and diversely invested portfolios have moderate beta values.
+* IT company (IBM) and retailing company (AAN) have the lowest beta values.
+
+***
+***
+
+#### 3.3.4 __Sharpe & Treynor__ ####
+
+```{r echo=FALSE}
+grid.arrange(g5,g6,ncol=2)
+```
+
+**Sharpe & Trynor ratio**
+
+* Tangency portfolio has the highest values for both ratios.
+
+***
+
+### 3.4  __Efficient Frontier__
+***
+
+
+```{r echo=FALSE}
+dev.off()
+res.mvp <- Minimum.variance.portfolio(Returns=Returns[,basket], 
+                                      mu.p=seq(from=0, to=0.01,length=21), 
+                                      do.plot=T, prt=F)
+
+jj<-data.frame(row.names=c("Tangency","MVP","Same","AAN","ATU","ASE","IBM","XOM"),
+           Volatility=c(0.06127035, 0.03344603, 0.03665043, 0.10060481, 0.07427546, 0.07470554, 0.04553918, 0.04403471),
+           Expected_returns=c(0.006542412, 0.003061224, 0.003262747, 0.001849969, 0.005151170, 0.004012613, 0.003764608, 0.001535373))
+
+points(jj,pch=8, col = "blue")
+
+text(jj,labels=row.names(jj),adj=-0.5,cex=0.7)
+```
+
+***
+
+## 4. __Evaluation of each Portfolios__
+
+### 4.1 __Data Handling__ 
+* Stock Price Data from Dec. 2016 to April. 2017 is used to calculate how much returns would have been made, if we invested according to portfolios we created above.
+
+```{r results='hide'}
+setwd('C:\\Users\\sungi\\Documents\\GitHub\\Financial-Data-Analysis-Stock-Portfolio\\data')
+AAN16<-read.csv("AAN(2016).csv")
+ATU16<-read.csv("ATU(2016).csv")
+ASE16<-read.csv("ASE(2016).csv")
+IBM16<-read.csv("IBM(2016).csv")
+XOM16<-read.csv("XOM(2016).csv")
+
+p16<-data.frame(AAN16[,5],ATU16[,5],ASE16[,5],IBM16[,5],XOM16[,5])
+colnames(p16)<-c("AAN","ATU","ASE","IBM","XOM")
+p16[1:5,]<-p16[5:1,]
+rownames(p16)<-c("Dec","Jan","Feb","Mar","Apr")
+
+dat16<-as.matrix(p16)
+diff16 <- diff(dat16)
+Returns16 <- diff16/dat16[-nrow(dat16),]
+rownames(Returns16)<-c("Jan","Feb","Mar","Apr")
+Returns16
+```
+
+***
+
+#### __Tangency Portfolio__ ####
+```{r echo=FALSE}
+tan16<-c(Returns16[1,]%*%res.tan$w.q,
+Returns16[2,]%*%res.tan$w.q, 
+Returns16[3,]%*%res.tan$w.q,
+Returns16[4,]%*%res.tan$w.q)
+names(tan16)<-c("Jan","Feb","Mar","Apr")
+tan16
+```
+***
+
+#### __Minimum Variance Portfolio__ ####
+```{r echo=FALSE}
+mvp16<-c(Returns16[1,]%*%res.mvp$w.p[,4],
+Returns16[2,]%*%res.mvp$w.p[,4],
+Returns16[3,]%*%res.mvp$w.p[,4],
+Returns16[4,]%*%res.mvp$w.p[,4]) 
+names(mvp16)<-c("Jan","Feb","Mar","Apr")
+mvp16
+```
+***
+
+#### __Equal Weight Portfolio__ ####
+```{r echo=FALSE}
+same16<-c(Returns16[1,]%*%w.p.same,
+Returns16[2,]%*%w.p.same,
+Returns16[3,]%*%w.p.same,
+Returns16[4,]%*%w.p.same)
+names(same16)<-c("Jan","Feb","Mar","Apr")
+same16
+```
+***
+
+#### __AAN Portfolio__ ####
+```{r echo=FALSE}
+AAN16<-Returns16[,1]
+names(AAN16)<-c("Jan","Feb","Mar","Apr")
+AAN16
+```
+***
+
+#### __ATU Portfolio__ ####
+```{r echo=FALSE}
+ATU16<-Returns16[,2]
+names(ATU16)<-c("Jan","Feb","Mar","Apr")
+ATU16
+```
+***
+
+#### __ASE Portfolio__ ####
+```{r echo=FALSE}
+ASE16<-Returns16[,3]
+names(ASE16)<-c("Jan","Feb","Mar","Apr")
+ASE16
+```
+***
+
+#### __IBM Portfolio__ ####
+```{r echo=FALSE}
+IBM16<-Returns16[,4]
+names(IBM16)<-c("Jan","Feb","Mar","Apr")
+IBM16
+```
+***
+
+#### __XOM Portfolio__ ####
+```{r echo=FALSE}
+XOM16<-Returns16[,5]
+names(XOM16)<-c("Jan","Feb","Mar","Apr")
+XOM16
+```
+***
+
+#### __Final Result of Portfolios__ ####
+```{r echo=FALSE}
+result16<-data.frame(tan16,mvp16,same16,AAN16,ATU16,ASE16,IBM16,XOM16)
+colnames(result16)<-c("tan","mvp","same","AAN","ATU","ASE","IBM","XOM")
+rownames(result16)<-c("Jan","Feb","Mar","Apr")
+result16
+```
+
+***
+
+### 4.3 __Return Plot__ 
+
+***
+
+#### 4.3.1 __Comparison of Return of each Portfolio__ ####
+```{r echo=FALSE}
+p <- plot_ly(result16, x=rownames(result16),y = ~tan,name="Tangency", type='scatter', mode='line')
+p %>% add_trace(x=rownames(result16),y = ~mvp ,name="MVP") %>% 
+  add_trace(x=rownames(result16),y = ~same,name="Same") %>% 
+  add_trace(x=rownames(result16),y = ~AAN, name="AAN") %>% 
+  add_trace(x=rownames(result16),y = ~ATU,name="ATU") %>% 
+  add_trace(x=rownames(result16),y = ~ASE, name="ASE") %>%
+  add_trace(x=rownames(result16),y = ~IBM,name="IBM") %>% 
+  add_trace(x=rownames(result16),y = ~XOM, name="XOM") %>% 
+  layout(title = "Returns plot",
+         yaxis=list(title="Return"),
+         xaxis=list(categoryorder = "array", categoryarray = rownames(result16), title="Time"),
+         showlegend = TRUE)
+```
+
+***
+
+* __Result__
+    - Jan : Except for AAN, all had negative values. Bad start.
+    - Feb : All the portfolios' return have increased and became positive. Nice.
+    - March : Most of the portfolios' return has reached its maximum point. Best time to make money.
+    - April : Stock price of IBM and ASE has decreased significantly. All the portfolios' return has decreased as they also got affected. 
+
+***
+         
+* Especially, Tangency portfolio which assigned large weight on IBM and negative weight; short stock buying, on XOM also showed a sharp drop.
+
+```{r echo=FALSE}
+res.tan$w.q
+```
+
+***
+
+#### 4.3.2 __Aggregational Gaussian__ ####
+
+**Aggregational Gaussian**
+
+* We can see that aggregated expected rate of return ($R_{p}$) follows Gaussian distribution ($N(\mu_{p},\sigma_{p}^2)$).
+
+```{r echo=FALSE}
+tan.train<-Returns%*%res.tan$w.q
+mvp.train<-Returns%*%res.mvp$w.p[,4]
+same.train<-Returns%*%w.p.same
+AAN.train<-Returns[,1]
+ATU.train<-Returns[,2]
+ASE.train<-Returns[,3]
+IBM.train<-Returns[,4]
+XOM.train<-Returns[,5]
+
+par(mfrow=c(2,4))
+
+hist(tan.train,prob=T,main='Tangency', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15)
+x<-seq(-0.2,0.2,0.01)
+lines(x,dnorm(x,mean=mean(tan.train),sd=sd(tan.train)),col="tomato1",lwd=2)
+points(result16[,1],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(mvp.train,prob=T,main='MVP', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15,
+     xlim=c(-0.1,0.1))
+x<-seq(-0.2,0.2,0.01)
+lines(x,dnorm(x,mean=mean(mvp.train),sd=sd(mvp.train)),col="tomato1",lwd=2)
+points(result16[,2],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(same.train,prob=T,main='Same', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15)
+x<-seq(-0.2,0.2,0.01)
+lines(x,dnorm(x,mean=mean(same.train),sd=sd(same.train)),col="tomato1",lwd=2)
+points(result16[,3],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(AAN.train,prob=T,main='AAN', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15)
+x<-seq(-0.2,0.5,0.01)
+lines(x,dnorm(x,mean=mean(AAN.train),sd=sd(AAN.train)),col="tomato1",lwd=2)
+points(result16[,4],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(ATU.train,prob=T,main='ATU', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15)
+x<-seq(-0.3,0.3,0.01)
+lines(x,dnorm(x,mean=mean(ATU.train),sd=sd(ATU.train)),col="tomato1",lwd=2)
+points(result16[,5],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(ASE.train,prob=T,main='ASE', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15)
+x<-seq(-0.3,0.3,0.01)
+lines(x,dnorm(x,mean=mean(ASE.train),sd=sd(ASE.train)),col="tomato1",lwd=2)
+points(result16[,6],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(IBM.train,prob=T,main='IBM', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15,
+     xlim=c(-0.15,0.15))
+x<-seq(-0.15,0.15,0.01)
+lines(x,dnorm(x,mean=mean(IBM.train),sd=sd(IBM.train)),col="tomato1",lwd=2)
+points(result16[,7],c(0,0,0,0),pch=19,col="tomato1")
+
+hist(XOM.train,prob=T,main='XOM', xlab='Portfolio returns', ylab='prob',col='skyblue',border='white',nclass=15)
+x<-seq(-0.15,0.15,0.01)
+lines(x,dnorm(x,mean=mean(XOM.train),sd=sd(XOM.train)),col="tomato1",lwd=2)
+points(result16[,8],c(0,0,0,0),pch=19,col="tomato1")
+```
+
+***
+
+* Considering __Aggregational Gaussian__'s property, __ASE__ and __IBM__ showed a rate of return that is hard to happen from January to April.
+
+***
+
+#### 4.3.3 __Aggregational Gaussian Comparison__ ####
+
+```{r echo=FALSE}
+dev.off()
+x<-seq(-0.3,0.3,0.01)
+dd<-data.frame(x=seq(-0.3,0.3,0.01),
+               dtan=dnorm(x,mean=mean(tan.train),sd=sd(tan.train)),
+               dmvp=dnorm(x,mean=mean(mvp.train),sd=sd(mvp.train)),
+               dsame=dnorm(x,mean=mean(same.train),sd=sd(same.train)),
+               dAAN=dnorm(x,mean=mean(AAN.train),sd=sd(AAN.train)),
+               dATU=dnorm(x,mean=mean(ATU.train),sd=sd(ATU.train)),
+               dASE=dnorm(x,mean=mean(ASE.train),sd=sd(ASE.train)),
+               dIBM=dnorm(x,mean=mean(IBM.train),sd=sd(IBM.train)),
+               dXOM=dnorm(x,mean=mean(XOM.train),sd=sd(XOM.train)))
+
+mm <- c(mean(tan.train), mean(mvp.train), mean(same.train),mean(AAN.train),mean(ATU.train),mean(ASE.train),
+        mean(IBM.train),mean(XOM.train))
+cc<-c()
+
+plot(dd[,1],dd[,2],col=2,lwd=2,type="l",xlim=c(-.15,.15),ylim=c(0,12),xlab="Returns",ylab="Prob")
+abline(v=mm[1], col=2, lwd=1.5, lty=2)
+
+for (i in 1:7){
+  lines(dd[,1],dd[,i+2],col=i+2,lwd=2)
+  abline(v=mm[i+1], col=i+2, lwd=1.5, lty=2)
+  cc[i]<-i+1
+  cc[8]<-9
+  legend(0.1,12,c("Tangency","MVP","Same","AAN","ATU","ASE","IBM","XOM"),lwd=2,col=cc)
+}
+
+jj           
+
+```
+
+***
+### __Result__ 
+
+* The portfolio with the highest expected rate of return is __Tangency__ portfolio.
+
+* The portfolios with the lowest volatility are __MVP__ and __Same__ portfolios. However, they have the expected rate of return that is only a half of __Tangency__ portfolio.
+
+* Therefore, if you want a portfolio with the highest expected rate of return, choose __Tangency__ portfolio. If you want a portfolio with the lowest volatility, choose __MVP__ or __Same__ portfolio.
+
+***
+
